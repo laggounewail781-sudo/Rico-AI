@@ -5,21 +5,16 @@ import urllib.request
 from ai_chat import ask_ai
 
 
-# =========================================================
-# CONFIG
-# =========================================================
-
 st.set_page_config(
     page_title="Rico AI",
     page_icon="🤖",
-    layout="wide",
-    initial_sidebar_state="expanded"
+    layout="wide"
 )
 
 
-# =========================================================
-# SESSION
-# =========================================================
+# =========================
+# MEMORY
+# =========================
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -27,80 +22,37 @@ if "messages" not in st.session_state:
 if "saved_chats" not in st.session_state:
     st.session_state.saved_chats = []
 
-if "chat_name" not in st.session_state:
-    st.session_state.chat_name = "محادثة جديدة"
 
-
-# =========================================================
-# STYLE
-# =========================================================
+# =========================
+# STYLE - NO HTML
+# =========================
 
 st.markdown("""
 <style>
-
 .stApp {
-    background:
-        radial-gradient(
-            circle at 75% 25%,
-            rgba(20,120,255,.08),
-            transparent 35%
-        ),
-        #050b12;
-    color: white;
+    background: #050b12;
 }
 
 .block-container {
-    max-width: 1450px;
-    padding-top: 28px !important;
-    padding-bottom: 30px !important;
+    max-width: 1400px;
+    padding-top: 25px;
 }
 
 section[data-testid="stSidebar"] {
     background: #071019;
-    border-right: 1px solid #1b2a36;
 }
 
-.rico-card {
+.rico-box {
     background: #08121c;
     border: 1px solid #203746;
     border-radius: 18px;
-    padding: 22px;
+    padding: 25px;
     text-align: center;
-    min-height: 570px;
 }
 
 .rico-face {
-    width: 210px;
-    height: 210px;
-    margin: 35px auto 20px auto;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    background:
-        radial-gradient(
-            circle,
-            #172b3b 0%,
-            #08121c 65%,
-            #050b12 100%
-        );
-
-    border: 2px solid #159cff;
-
-    box-shadow:
-        0 0 15px rgba(21,156,255,.7),
-        0 0 45px rgba(21,156,255,.25);
-
-    font-size: 95px;
-}
-
-.status {
-    background: #09291c;
-    border: 1px solid #12643f;
-    border-radius: 10px;
-    padding: 10px;
-    margin-top: 15px;
+    font-size: 100px;
+    padding: 35px;
 }
 
 .info-box {
@@ -109,48 +61,14 @@ section[data-testid="stSidebar"] {
     border-radius: 10px;
     padding: 10px;
     margin: 8px 0;
-    text-align: right;
 }
-
-.wave {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 5px;
-    height: 35px;
-    margin: 15px;
-}
-
-.wave span {
-    width: 4px;
-    border-radius: 5px;
-    background: #159cff;
-}
-
-.wave span:nth-child(1) {height:10px;}
-.wave span:nth-child(2) {height:22px;}
-.wave span:nth-child(3) {height:32px;}
-.wave span:nth-child(4) {height:18px;}
-.wave span:nth-child(5) {height:27px;}
-.wave span:nth-child(6) {height:12px;}
-
-.title {
-    font-size: 34px;
-    font-weight: bold;
-}
-
-.subtitle {
-    color: #7f909e;
-    margin-bottom: 20px;
-}
-
 </style>
 """, unsafe_allow_html=True)
 
 
-# =========================================================
+# =========================
 # TIME / DATE
-# =========================================================
+# =========================
 
 now = datetime.now()
 
@@ -158,78 +76,37 @@ current_time = now.strftime("%H:%M:%S")
 current_date = now.strftime("%d/%m/%Y")
 
 
-# =========================================================
+# =========================
 # WEATHER
-# =========================================================
-
-weather_text = "غير متوفر"
+# =========================
 
 try:
-
-    weather_url = "https://wttr.in/Algeria?format=%C+%t"
-
-    weather_text = urllib.request.urlopen(
-        weather_url,
+    weather = urllib.request.urlopen(
+        "https://wttr.in/Algeria?format=%C+%t",
         timeout=5
     ).read().decode("utf-8")
-
 except Exception:
+    weather = "غير متوفر حالياً"
 
-    weather_text = "🌤️ غير متوفر حالياً"
 
-
-# =========================================================
+# =========================
 # SIDEBAR
-# =========================================================
+# =========================
 
 with st.sidebar:
 
-    st.markdown(
-        "# 🤖 RICO AI"
-    )
-
-    st.caption(
-        "مساعدك الذكي الشخصي"
-    )
+    st.title("🤖 RICO AI")
 
     st.divider()
 
-    st.markdown("### 🕐 الوقت")
-
+    st.subheader("🕐 الوقت")
     st.info(current_time)
 
-    st.markdown("### 📅 التاريخ")
-
+    st.subheader("📅 التاريخ")
     st.info(current_date)
 
-    st.markdown("### 🌤️ الطقس")
-
-    st.info(weather_text)
-
-    st.divider()
-
-    st.markdown("### 💬 المحادثات")
-
-    if st.session_state.saved_chats:
-
-        for index, chat in enumerate(
-            st.session_state.saved_chats
-        ):
-
-            if st.button(
-                f"💬 محادثة {index + 1}",
-                key=f"chat_{index}",
-                use_container_width=True
-            ):
-
-                st.session_state.messages = chat.copy()
-                st.rerun()
-
-    else:
-
-        st.caption(
-            "لا توجد محادثات محفوظة."
-        )
+    st.subheader("🌤️ الطقس")
+    st.info(weather)
 
     st.divider()
 
@@ -237,231 +114,145 @@ with st.sidebar:
         "➕ محادثة جديدة",
         use_container_width=True
     ):
-
-        if st.session_state.messages:
-
-            st.session_state.saved_chats.append(
-                st.session_state.messages.copy()
-            )
-
         st.session_state.messages = []
-
         st.rerun()
 
     if st.button(
-        "🗑️ مسح المحادثة الحالية",
+        "🗑️ مسح المحادثة",
         use_container_width=True
     ):
-
         st.session_state.messages = []
-
         st.rerun()
 
 
-# =========================================================
+# =========================
 # HEADER
-# =========================================================
+# =========================
 
-st.markdown(
-    '<div class="title">🤖 Rico AI</div>',
-    unsafe_allow_html=True
-)
+st.title("🤖 Rico AI")
 
-st.markdown(
-    '<div class="subtitle">مساعدك الذكي — كتابة وصوت وذاكرة محادثة</div>',
-    unsafe_allow_html=True
+st.caption(
+    "مساعدك الذكي — الكتابة متاحة الآن"
 )
 
 
-# =========================================================
-# MAIN COLUMNS
-# =========================================================
+# =========================
+# COLUMNS
+# =========================
 
-chat_column, rico_column = st.columns(
+chat_col, rico_col = st.columns(
     [3, 1],
     gap="large"
 )
 
 
-# =========================================================
+# =========================
 # CHAT
-# =========================================================
+# =========================
 
-with chat_column:
+with chat_col:
 
     st.subheader("💬 المحادثة")
 
     if not st.session_state.messages:
 
-        st.markdown(
-            """
-            <div style="
-                height:420px;
-                display:flex;
-                justify-content:center;
-                align-items:center;
-                color:#657684;
-                font-size:18px;
-            ">
-                👋 مرحباً! ابدأ الكلام مع ريكو
-            </div>
-            """,
-            unsafe_allow_html=True
+        st.info(
+            "👋 مرحباً! أنا Rico. اكتبلي أي سؤال."
         )
 
-    else:
+    for message in st.session_state.messages:
 
-        for message in st.session_state.messages:
+        if message["role"] == "user":
 
-            if message["role"] == "user":
+            with st.chat_message("user"):
+                st.write(message["content"])
 
-                with st.chat_message("user"):
-                    st.write(message["content"])
+        else:
 
-            else:
-
-                with st.chat_message("assistant"):
-                    st.write(message["content"])
+            with st.chat_message("assistant"):
+                st.write(message["content"])
 
 
-    # =====================================================
-    # TEXT INPUT
-    # =====================================================
-
-    question = st.chat_input(
-        "⌨️ اكتب رسالتك لريكو..."
-    )
-
-
-    if question:
-
-        question = question.strip()
-
-        if question:
-
-            # رسالة المستخدم
-            st.session_state.messages.append(
-                {
-                    "role": "user",
-                    "content": question
-                }
-            )
-
-            # تاريخ المحادثة بدون السؤال الحالي
-            history = st.session_state.messages[:-1]
-
-            # Rico
-            answer = ask_ai(
-                question,
-                history
-            )
-
-            # جواب Rico
-            st.session_state.messages.append(
-                {
-                    "role": "assistant",
-                    "content": answer
-                }
-            )
-
-            st.rerun()
-
-
-# =========================================================
+# =========================
 # RICO
-# =========================================================
+# =========================
 
-with rico_column:
+with rico_col:
 
     st.markdown(
         """
-        <div class="rico-card">
-
-            <div style="
-                text-align:right;
-                font-size:21px;
-                font-weight:bold;
-            ">
-                🤖 ريكو
-            </div>
-
-            <div class="rico-face">
-                🤖
-            </div>
-
+        <div class="rico-box">
+            <div class="rico-face">🤖</div>
             <h2>Rico</h2>
-
-            <p style="color:#8291a0;">
-                مساعدك الذكي
-            </p>
-
-            <div class="wave">
-                <span></span>
-                <span></span>
-                <span></span>
-                <span></span>
-                <span></span>
-                <span></span>
-            </div>
-
-            <div class="status">
-                🟢 النظام يعمل
-            </div>
-
-            <div class="info-box">
-                🧠 الذكاء الاصطناعي: متصل
-            </div>
-
-            <div class="info-box">
-                💬 الكتابة: جاهزة
-            </div>
-
-            <div class="info-box">
-                🎤 الصوت: جاهز على الجهاز
-            </div>
-
+            <p>مساعدك الذكي</p>
         </div>
         """,
         unsafe_allow_html=True
     )
 
+    st.success("🟢 Rico يعمل")
 
-# =========================================================
-# SAVE CURRENT CHAT
-# =========================================================
+    st.info("🧠 الذكاء الاصطناعي متصل")
+
+    st.info("⌨️ الكتابة جاهزة")
+
+
+# =========================
+# INPUT
+# =========================
+
+question = st.chat_input(
+    "اكتب رسالتك لريكو..."
+)
+
+
+# =========================
+# AI
+# =========================
+
+if question:
+
+    question = question.strip()
+
+    if question:
+
+        history = st.session_state.messages.copy()
+
+        st.session_state.messages.append({
+            "role": "user",
+            "content": question
+        })
+
+        with st.spinner("🤖 Rico يفكر..."):
+
+            answer = ask_ai(
+                question,
+                history
+            )
+
+        st.session_state.messages.append({
+            "role": "assistant",
+            "content": str(answer)
+        })
+
+        st.rerun()
+
+
+# =========================
+# SAVE CHAT
+# =========================
 
 if st.session_state.messages:
 
     st.divider()
 
-    col1, col2 = st.columns(2)
+    if st.button(
+        "💾 حفظ المحادثة",
+        use_container_width=True
+    ):
 
-    with col1:
+        st.session_state.saved_chats.append(
+            st.session_state.messages.copy()
+        )
 
-        if st.button(
-            "💾 حفظ المحادثة",
-            use_container_width=True
-        ):
-
-            st.session_state.saved_chats.append(
-                st.session_state.messages.copy()
-            )
-
-            st.success(
-                "✅ تم حفظ المحادثة"
-            )
-
-    with col2:
-
-        if st.button(
-            "🆕 حفظ وبدء محادثة جديدة",
-            use_container_width=True
-        ):
-
-            st.session_state.saved_chats.append(
-                st.session_state.messages.copy()
-            )
-
-            st.session_state.messages = []
-
-            st.rerun()
+        st.success("✅ تم حفظ المحادثة")
