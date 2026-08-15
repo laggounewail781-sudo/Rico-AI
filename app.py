@@ -1,8 +1,12 @@
 import streamlit as st
 from datetime import datetime
+import urllib.request
+
+from ai_chat import ask_ai
+
 
 # =========================================================
-# Rico AI
+# CONFIG
 # =========================================================
 
 st.set_page_config(
@@ -12,212 +16,64 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# =========================================================
-# AI
-# =========================================================
-
-try:
-    from assistant import process_command
-except Exception:
-    process_command = None
-
 
 # =========================================================
-# Session State
+# SESSION
 # =========================================================
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-if "mode" not in st.session_state:
-    st.session_state.mode = "Gamer"
+if "saved_chats" not in st.session_state:
+    st.session_state.saved_chats = []
 
-if "character" not in st.session_state:
-    st.session_state.character = "🤖"
-
-if "online" not in st.session_state:
-    st.session_state.online = True
+if "chat_name" not in st.session_state:
+    st.session_state.chat_name = "محادثة جديدة"
 
 
 # =========================================================
-# CSS
+# STYLE
 # =========================================================
 
 st.markdown("""
 <style>
 
-#MainMenu {
-    visibility: hidden;
-}
-
-footer {
-    visibility: hidden;
-}
-
-header {
-    visibility: hidden;
-}
-
-html, body, [class*="css"] {
-    font-family: Arial, sans-serif;
-}
-
 .stApp {
-    background: #050b12;
+    background:
+        radial-gradient(
+            circle at 75% 25%,
+            rgba(20,120,255,.08),
+            transparent 35%
+        ),
+        #050b12;
     color: white;
 }
 
-/* =========================
-   MAIN CONTAINER
-   ========================= */
-
 .block-container {
-    max-width: 1400px;
-    padding-top: 35px !important;
-    padding-bottom: 25px !important;
+    max-width: 1450px;
+    padding-top: 28px !important;
+    padding-bottom: 30px !important;
 }
-
-/* =========================
-   SIDEBAR
-   ========================= */
 
 section[data-testid="stSidebar"] {
-    background: #08111a;
-    border-right: 1px solid #22313e;
-}
-
-section[data-testid="stSidebar"] > div {
-    padding-top: 25px;
-}
-
-.sidebar-title {
-    text-align: center;
-    font-size: 25px;
-    font-weight: bold;
-    margin-bottom: 25px;
-}
-
-.sidebar-line {
-    height: 1px;
-    background: #263541;
-    margin: 20px 0;
-}
-
-.nav-item {
-    background: #101b26;
-    border: 1px solid #2a3b4a;
-    border-radius: 10px;
-    padding: 11px;
-    margin: 9px 0;
-    text-align: center;
-    color: #e8edf2;
-    font-size: 15px;
-}
-
-.nav-item:hover {
-    border-color: #178cff;
-    background: #122333;
-}
-
-/* =========================
-   HEADER
-   ========================= */
-
-.rico-title {
-    font-size: 34px;
-    font-weight: bold;
-    margin-bottom: 5px;
-}
-
-.rico-subtitle {
-    color: #8291a0;
-    font-size: 13px;
-    margin-bottom: 20px;
-}
-
-/* =========================
-   STATUS
-   ========================= */
-
-.status-box {
-    background: #083622;
-    border: 1px solid #0c6d43;
-    border-radius: 10px;
-    padding: 12px 18px;
-    margin-bottom: 20px;
-    color: #d7fff0;
-}
-
-/* =========================
-   CHAT
-   ========================= */
-
-.chat-title {
-    font-size: 25px;
-    font-weight: bold;
-    margin-bottom: 15px;
-}
-
-.chat-area {
-    min-height: 430px;
-    max-height: 430px;
-    overflow-y: auto;
-    padding: 10px;
     background: #071019;
-    border-radius: 12px;
-    border: 1px solid #182936;
+    border-right: 1px solid #1b2a36;
 }
 
-.user-message {
-    background: #123c66;
-    border: 1px solid #1b6aa5;
-    padding: 12px 15px;
-    border-radius: 12px;
-    margin: 10px 0 10px auto;
-    max-width: 75%;
-    text-align: right;
-}
-
-.ai-message {
-    background: #121c26;
-    border: 1px solid #243544;
-    padding: 12px 15px;
-    border-radius: 12px;
-    margin: 10px auto 10px 0;
-    max-width: 75%;
-}
-
-/* =========================
-   RICO PANEL
-   ========================= */
-
-.rico-panel {
-    background: #08111a;
-    border: 1px solid #223542;
-    border-radius: 15px;
-    padding: 20px;
-    min-height: 540px;
+.rico-card {
+    background: #08121c;
+    border: 1px solid #203746;
+    border-radius: 18px;
+    padding: 22px;
     text-align: center;
+    min-height: 570px;
 }
 
-.rico-panel-title {
-    font-size: 20px;
-    font-weight: bold;
-    text-align: right;
-}
-
-.robot-circle {
+.rico-face {
     width: 210px;
     height: 210px;
+    margin: 35px auto 20px auto;
     border-radius: 50%;
-    margin: 35px auto 25px auto;
-
-    border: 2px solid #149cff;
-
-    box-shadow:
-        0 0 15px #149cff,
-        0 0 35px rgba(20,156,255,0.35);
-
     display: flex;
     align-items: center;
     justify-content: center;
@@ -225,71 +81,101 @@ section[data-testid="stSidebar"] > div {
     background:
         radial-gradient(
             circle,
-            #182938 0%,
-            #071019 65%,
+            #172b3b 0%,
+            #08121c 65%,
             #050b12 100%
         );
+
+    border: 2px solid #159cff;
+
+    box-shadow:
+        0 0 15px rgba(21,156,255,.7),
+        0 0 45px rgba(21,156,255,.25);
+
+    font-size: 95px;
 }
 
-.robot-face {
-    font-size: 105px;
+.status {
+    background: #09291c;
+    border: 1px solid #12643f;
+    border-radius: 10px;
+    padding: 10px;
+    margin-top: 15px;
 }
 
-.robot-name {
-    font-size: 25px;
-    font-weight: bold;
-    margin-top: 10px;
-}
-
-.robot-mode {
-    color: #8d9aa7;
-    margin-top: 8px;
+.info-box {
+    background: #0a151f;
+    border: 1px solid #203746;
+    border-radius: 10px;
+    padding: 10px;
+    margin: 8px 0;
+    text-align: right;
 }
 
 .wave {
-    margin: 20px auto;
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 4px;
-    height: 30px;
+    gap: 5px;
+    height: 35px;
+    margin: 15px;
 }
 
 .wave span {
-    display: block;
     width: 4px;
-    background: #0c9cff;
     border-radius: 5px;
+    background: #159cff;
 }
 
-.wave span:nth-child(1) { height: 10px; }
-.wave span:nth-child(2) { height: 20px; }
-.wave span:nth-child(3) { height: 30px; }
-.wave span:nth-child(4) { height: 18px; }
-.wave span:nth-child(5) { height: 27px; }
-.wave span:nth-child(6) { height: 12px; }
+.wave span:nth-child(1) {height:10px;}
+.wave span:nth-child(2) {height:22px;}
+.wave span:nth-child(3) {height:32px;}
+.wave span:nth-child(4) {height:18px;}
+.wave span:nth-child(5) {height:27px;}
+.wave span:nth-child(6) {height:12px;}
 
-.system-info {
-    background: #0b151e;
-    border: 1px solid #20313e;
-    border-radius: 10px;
-    padding: 12px;
-    text-align: right;
-    color: #8999a8;
-    font-size: 12px;
-    line-height: 2;
+.title {
+    font-size: 34px;
+    font-weight: bold;
 }
 
-/* =========================
-   INPUT
-   ========================= */
-
-div[data-testid="stChatInput"] {
-    margin-top: 12px;
+.subtitle {
+    color: #7f909e;
+    margin-bottom: 20px;
 }
 
 </style>
 """, unsafe_allow_html=True)
+
+
+# =========================================================
+# TIME / DATE
+# =========================================================
+
+now = datetime.now()
+
+current_time = now.strftime("%H:%M:%S")
+current_date = now.strftime("%d/%m/%Y")
+
+
+# =========================================================
+# WEATHER
+# =========================================================
+
+weather_text = "غير متوفر"
+
+try:
+
+    weather_url = "https://wttr.in/Algeria?format=%C+%t"
+
+    weather_text = urllib.request.urlopen(
+        weather_url,
+        timeout=5
+    ).read().decode("utf-8")
+
+except Exception:
+
+    weather_text = "🌤️ غير متوفر حالياً"
 
 
 # =========================================================
@@ -299,113 +185,125 @@ div[data-testid="stChatInput"] {
 with st.sidebar:
 
     st.markdown(
-        '<div class="sidebar-title">🤖 RICO AI</div>',
-        unsafe_allow_html=True
+        "# 🤖 RICO AI"
     )
 
-    st.markdown('<div class="sidebar-line"></div>',
-                unsafe_allow_html=True)
-
-    st.markdown(
-        '<div class="nav-item">🏠 الرئيسية</div>',
-        unsafe_allow_html=True
+    st.caption(
+        "مساعدك الذكي الشخصي"
     )
 
-    st.markdown(
-        '<div class="nav-item">💬 المحادثة</div>',
-        unsafe_allow_html=True
-    )
+    st.divider()
 
-    st.markdown(
-        '<div class="nav-item">🎓 الدراسة</div>',
-        unsafe_allow_html=True
-    )
+    st.markdown("### 🕐 الوقت")
 
-    st.markdown(
-        '<div class="nav-item">💻 البرمجة</div>',
-        unsafe_allow_html=True
-    )
+    st.info(current_time)
 
-    st.markdown(
-        '<div class="nav-item">🎮 الألعاب</div>',
-        unsafe_allow_html=True
-    )
+    st.markdown("### 📅 التاريخ")
 
-    st.markdown(
-        '<div class="nav-item">🔎 البحث</div>',
-        unsafe_allow_html=True
-    )
+    st.info(current_date)
 
-    st.markdown(
-        '<div class="nav-item">🧑‍🏫 العلم</div>',
-        unsafe_allow_html=True
-    )
+    st.markdown("### 🌤️ الطقس")
 
-    st.markdown('<div class="sidebar-line"></div>',
-                unsafe_allow_html=True)
+    st.info(weather_text)
 
-    st.caption("الوضع الحالي")
+    st.divider()
 
-    st.success("🤖 مساعد ذكي")
+    st.markdown("### 💬 المحادثات")
 
-    if st.button("🗑️ مسح المحادثة", use_container_width=True):
+    if st.session_state.saved_chats:
+
+        for index, chat in enumerate(
+            st.session_state.saved_chats
+        ):
+
+            if st.button(
+                f"💬 محادثة {index + 1}",
+                key=f"chat_{index}",
+                use_container_width=True
+            ):
+
+                st.session_state.messages = chat.copy()
+                st.rerun()
+
+    else:
+
+        st.caption(
+            "لا توجد محادثات محفوظة."
+        )
+
+    st.divider()
+
+    if st.button(
+        "➕ محادثة جديدة",
+        use_container_width=True
+    ):
+
+        if st.session_state.messages:
+
+            st.session_state.saved_chats.append(
+                st.session_state.messages.copy()
+            )
+
         st.session_state.messages = []
+
+        st.rerun()
+
+    if st.button(
+        "🗑️ مسح المحادثة الحالية",
+        use_container_width=True
+    ):
+
+        st.session_state.messages = []
+
         st.rerun()
 
 
 # =========================================================
-# MAIN LAYOUT
+# HEADER
 # =========================================================
 
-left, right = st.columns(
-    [3.3, 1.25],
+st.markdown(
+    '<div class="title">🤖 Rico AI</div>',
+    unsafe_allow_html=True
+)
+
+st.markdown(
+    '<div class="subtitle">مساعدك الذكي — كتابة وصوت وذاكرة محادثة</div>',
+    unsafe_allow_html=True
+)
+
+
+# =========================================================
+# MAIN COLUMNS
+# =========================================================
+
+chat_column, rico_column = st.columns(
+    [3, 1],
     gap="large"
 )
 
 
 # =========================================================
-# LEFT SIDE
+# CHAT
 # =========================================================
 
-with left:
+with chat_column:
 
-    st.markdown(
-        '<div class="rico-title">مرحبا 👋 أنا ريكو</div>',
-        unsafe_allow_html=True
-    )
-
-    st.markdown(
-        '<div class="rico-subtitle">مساعدك الذكي الشخصي</div>',
-        unsafe_allow_html=True
-    )
-
-    st.markdown(
-        '<div class="status-box">⚡ الحالة: جاهز</div>',
-        unsafe_allow_html=True
-    )
-
-    st.markdown(
-        '<div class="chat-title">💬 المحادثة</div>',
-        unsafe_allow_html=True
-    )
-
-    # -------------------------
-    # Messages
-    # -------------------------
+    st.subheader("💬 المحادثة")
 
     if not st.session_state.messages:
 
         st.markdown(
             """
             <div style="
-                height:380px;
+                height:420px;
                 display:flex;
-                align-items:center;
                 justify-content:center;
-                color:#637383;
-                font-size:14px;
+                align-items:center;
+                color:#657684;
+                font-size:18px;
             ">
-                👋 ابدأ محادثتك مع ريكو
+                👋 مرحباً! ابدأ الكلام مع ريكو
             </div>
             """,
             unsafe_allow_html=True
@@ -413,58 +311,89 @@ with left:
 
     else:
 
-        for msg in st.session_state.messages:
+        for message in st.session_state.messages:
 
-            if msg["role"] == "user":
+            if message["role"] == "user":
 
-                st.markdown(
-                    f"""
-                    <div class="user-message">
-                        👤 {msg["content"]}
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
+                with st.chat_message("user"):
+                    st.write(message["content"])
 
             else:
 
-                st.markdown(
-                    f"""
-                    <div class="ai-message">
-                        🤖 {msg["content"]}
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
+                with st.chat_message("assistant"):
+                    st.write(message["content"])
+
+
+    # =====================================================
+    # TEXT INPUT
+    # =====================================================
+
+    question = st.chat_input(
+        "⌨️ اكتب رسالتك لريكو..."
+    )
+
+
+    if question:
+
+        question = question.strip()
+
+        if question:
+
+            # رسالة المستخدم
+            st.session_state.messages.append(
+                {
+                    "role": "user",
+                    "content": question
+                }
+            )
+
+            # تاريخ المحادثة بدون السؤال الحالي
+            history = st.session_state.messages[:-1]
+
+            # Rico
+            answer = ask_ai(
+                question,
+                history
+            )
+
+            # جواب Rico
+            st.session_state.messages.append(
+                {
+                    "role": "assistant",
+                    "content": answer
+                }
+            )
+
+            st.rerun()
 
 
 # =========================================================
-# RIGHT SIDE - RICO
+# RICO
 # =========================================================
 
-with right:
+with rico_column:
 
     st.markdown(
-        f"""
-        <div class="rico-panel">
+        """
+        <div class="rico-card">
 
-            <div class="rico-panel-title">
+            <div style="
+                text-align:right;
+                font-size:21px;
+                font-weight:bold;
+            ">
                 🤖 ريكو
             </div>
 
-            <div class="robot-circle">
-                <div class="robot-face">
-                    {st.session_state.character}
-                </div>
+            <div class="rico-face">
+                🤖
             </div>
 
-            <div class="robot-name">
-                ريكو
-            </div>
+            <h2>Rico</h2>
 
-            <div class="robot-mode">
-                الوضع: {st.session_state.mode}
-            </div>
+            <p style="color:#8291a0;">
+                مساعدك الذكي
+            </p>
 
             <div class="wave">
                 <span></span>
@@ -475,10 +404,20 @@ with right:
                 <span></span>
             </div>
 
-            <div class="system-info">
-                🧠 الذكاء الاصطناعي: متصل<br>
-                🌐 وضع الويب: جاهز<br>
-                🟢 النظام: يعمل
+            <div class="status">
+                🟢 النظام يعمل
+            </div>
+
+            <div class="info-box">
+                🧠 الذكاء الاصطناعي: متصل
+            </div>
+
+            <div class="info-box">
+                💬 الكتابة: جاهزة
+            </div>
+
+            <div class="info-box">
+                🎤 الصوت: جاهز على الجهاز
             </div>
 
         </div>
@@ -488,65 +427,41 @@ with right:
 
 
 # =========================================================
-# CHAT INPUT
+# SAVE CURRENT CHAT
 # =========================================================
 
-question = st.chat_input(
-    "اكتب رسالتك لريكو..."
-)
+if st.session_state.messages:
 
+    st.divider()
 
-# =========================================================
-# PROCESS MESSAGE
-# =========================================================
+    col1, col2 = st.columns(2)
 
-if question:
+    with col1:
 
-    question = question.strip()
+        if st.button(
+            "💾 حفظ المحادثة",
+            use_container_width=True
+        ):
 
-    if question:
+            st.session_state.saved_chats.append(
+                st.session_state.messages.copy()
+            )
 
-        # إضافة رسالة المستخدم
-        st.session_state.messages.append(
-            {
-                "role": "user",
-                "content": question
-            }
-        )
+            st.success(
+                "✅ تم حفظ المحادثة"
+            )
 
-        # -------------------------
-        # Rico AI
-        # -------------------------
+    with col2:
 
-        answer = None
+        if st.button(
+            "🆕 حفظ وبدء محادثة جديدة",
+            use_container_width=True
+        ):
 
-        try:
+            st.session_state.saved_chats.append(
+                st.session_state.messages.copy()
+            )
 
-            if process_command is not None:
+            st.session_state.messages = []
 
-                answer = process_command(question)
-
-            else:
-
-                answer = (
-                    "⚠️ ما قدرتش نحمّل نظام ريكو."
-                )
-
-        except Exception as e:
-
-            answer = f"❌ حدث خطأ: {e}"
-
-        if answer is None:
-            answer = "🤖 ريكو ما قدرش يجاوب حالياً."
-
-        answer = str(answer)
-
-        # إضافة الإجابة
-        st.session_state.messages.append(
-            {
-                "role": "assistant",
-                "content": answer
-            }
-        )
-
-        st.rerun()
+            st.rerun()
